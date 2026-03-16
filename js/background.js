@@ -20,37 +20,38 @@ window.addEventListener("load", function(){
             this.turnX = startX;
             this.turnY = startY;
             if (direction%2 === 0){
-                this.travel = 50+Math.floor((width-100)*Math.random());
+                this.travel = 50+Math.floor((this.height-100)*Math.random());
                 this.turnY = this.travel;
             }   
             else{
-                this.travel = 50+Math.floor((height-100)*Math.random());
+                this.travel = 50+Math.floor((this.width-100)*Math.random());
                 this.turnX = this.travel;
             }
         }
         newdirection(check){
-            if (check === this.travel && this.turn == false){
+            if (check && this.turn === false){
                 this.direction = (3 + this.direction + Math.floor(3*Math.random()))%4;
                 this.turn = true;
             }
         }
         update(){
+            let speed = 2;
             if (this.end === false){
                 if (this.direction == 0){
-                    this.posY -= 1;
-                    this.newdirection(this.posY);
+                    this.posY -= speed;
+                    this.newdirection(this.posY <= this.travel);
                 }   
                 else if (this.direction == 1){
-                    this.posX += 1;
-                    this.newdirection(this.posX);
+                    this.posX += speed;
+                    this.newdirection(this.posX >= this.travel);
                 }
                 else if (this.direction == 2){
-                    this.posY += 1;
-                    this.newdirection(this.posY);
+                    this.posY += speed;
+                    this.newdirection(this.posY >= this.travel);
                 }
                 else{
-                    this.posX -= 1;
-                    this.newdirection(this.posX);
+                    this.posX -= speed;
+                    this.newdirection(this.posX <= this.travel);
                 }
             }
             if (this.posX < 0 || this.posX > this.width){
@@ -62,23 +63,15 @@ window.addEventListener("load", function(){
         }
 
         draw(ctx) {
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 10;
+            ctx.beginPath()
+            ctx.moveTo(this.startX, this.startY);
             if (this.turn){
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 10;
-                ctx.beginPath()
-                ctx.moveTo(this.startX, this.startY);
                 ctx.lineTo(this.turnX,this.turnY);
-                ctx.lineTo(this.posX, this.posY);
-                ctx.stroke();
             }
-            else{
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 10;
-                ctx.beginPath()
-                ctx.moveTo(this.startX, this.startY);
-                ctx.lineTo(this.posX, this.posY);
-                ctx.stroke();
-            }
+            ctx.lineTo(this.posX, this.posY);
+            ctx.stroke();
         }
     }
 
@@ -128,10 +121,11 @@ window.addEventListener("load", function(){
 
 
         if (checkFlows(flows)){
-            flows.length = 0;
-            for (let i = 0; i < 8; i++){
-                generateFlows(flows);
+            if (flows.length == 10){
+                flows.length = 0;
             }
+            generateFlows(flows);
+            
         }
 
         for (let i = 0; i < flows.length; i++){
