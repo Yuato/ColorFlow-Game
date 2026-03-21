@@ -1,7 +1,3 @@
-
-
-
-
 window.addEventListener("load", function(){
 
     class Flow{
@@ -35,7 +31,7 @@ window.addEventListener("load", function(){
             }
         }
         update(){
-            let speed = 2;
+            let speed = Math.min(this.width,this.height)/300;
             if (this.end === false){
                 if (this.direction == 0){
                     this.posY -= speed;
@@ -134,16 +130,6 @@ window.addEventListener("load", function(){
         }
 
         requestAnimationFrame(animate);
-    }
-
- 
-
-
-
-
-
-    function createFlow(){
-        
     }
 
     animate();
