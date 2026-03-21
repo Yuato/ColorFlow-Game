@@ -8,6 +8,7 @@ window.addEventListener("load", function(){
             this.size = 5;
             this.width = width;
             this.height = height;
+            this.colors = ['purple', 'teal', 'orange', 'coral'];
 
             this.frameMin = Math.min(width, height);
             this.strokeLength = this.frameMin / 100;
@@ -57,7 +58,7 @@ window.addEventListener("load", function(){
         }
 
         drawSolution(ctx){
-            const colors = ['purple', 'teal', 'orange', 'coral'];
+            
             let cellSize = (this.frameMin-20)/this.size;
             let grid = this.solutionGrid;
             let endpoints = this.solutionGrid.endpoints;
@@ -66,7 +67,7 @@ window.addEventListener("load", function(){
             for (const endpoint of endpoints){
                 let path = endpoint.path;
                 ctx.beginPath();
-                ctx.strokeStyle = colors[endpoint.color];
+                ctx.strokeStyle = this.colors[endpoint.color];
                 ctx.lineWidth = cellSize * 0.4;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
@@ -84,12 +85,28 @@ window.addEventListener("load", function(){
             }
         }
 
-        drawEndpoints(){
+        drawEndpoints(ctx){
+            let r = null;
+            let c = null
+            let color = null;
             for (let i = 0; i < this.userEndpoints.length; i++){
-                let r = this.x + (this.userEndpoints.start.r+0.5) * this.cellSize;
-                let c = this.y + (this.userEndpoints.start.c+0.5) * this.cellSize;
+                color = this.colors[this.userEndpoints[i].color];
+                r = this.x + (this.userEndpoints[i].start.r+0.5) * this.cellSize;
+                c = this.y + (this.userEndpoints[i].start.c+0.5) * this.cellSize;
                 ctx.beginPath();
-                ctx.arc(r, c, 50, 0, Math.PI * 2);
+                ctx.strokeStyle = color;
+                ctx.arc(r, c, this.cellSize/3, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.stroke();
+
+                r = this.x + (this.userEndpoints[i].end.r+0.5) * this.cellSize;
+                c = this.y + (this.userEndpoints[i].end.c+0.5) * this.cellSize;
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.arc(r, c, this.cellSize/3, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
                 ctx.stroke();
             }
             
@@ -386,6 +403,7 @@ window.addEventListener("load", function(){
         ctx.fillStyle = "black"; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         grid.drawGrid(ctx);
+        grid.drawEndpoints(ctx);
 
         requestAnimationFrame(animate);
     }
