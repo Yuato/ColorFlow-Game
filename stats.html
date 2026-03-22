@@ -1,0 +1,49 @@
+<!--
+* Tony Yuan
+* March 19 2026
+* A html file displaying user's game statistics
+-->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Flow Free — Stats</title>
+        <link rel="stylesheet" href="css/stats.css"/>
+        <script src="js/stats.js"></script>
+    </head>
+    <body>
+
+        <div class="top-bar">
+            <a href="game.html" class="btn-back">&#8592; Game</a>
+        </div>
+
+        <div class="stats-container">
+
+            <div class="wins-header">Wins</div>
+
+            <div class="stat-row">
+                <span class="stat-label">Easy</span>
+                <span class="stat-colon">:</span>
+                <span class="stat-value easy" id="s-easy">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Medium</span>
+                <span class="stat-colon">:</span>
+                <span class="stat-value medium" id="s-medium">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Hard</span>
+                <span class="stat-colon">:</span>
+                <span class="stat-value hard" id="s-hard">0</span>
+            </div>
+            <div class="stat-row total-row">
+                <span class="stat-label">Total</span>
+                <span class="stat-colon">:</span>
+                <span class="stat-value" id="s-total">0</span>
+            </div>
+
+        </div>
+
+    </body>
+</html>

@@ -1,22 +1,104 @@
+/**
+* Tony Yuan
+* March 12 2026
+* Javascript file that generates the game grid, displays the grid, and buttons controlling
+  difficulty, button to display solution, and links to other pages.
+**/
 window.addEventListener("load", function(){
     const EMPTY = null;
     const DIRS  = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
 
+    /**
+     * Reads and returns the win counts stored in localStorage
+     *
+     * @returns {{ easy: Number, medium: Number, hard: Number }}
+     */
+    function loadStats(){
+        const raw = localStorage.getItem("flowfree_stats");
+        if (raw) return JSON.parse(raw);
+        return { easy: 0, medium: 0, hard: 0 };
+    }
+
+    /**
+     * Writes the stats object to localStorage
+     *
+     * @param {{ easy: Number, medium: Number, hard: Number }} stats
+     */
+    function saveStats(stats){
+        localStorage.setItem("flowfree_stats", JSON.stringify(stats));
+    }
+
+    /**
+     * Increments the win count for the given difficulty and saves it
+     *
+     * @param {String} difficulty - "easy" | "medium" | "hard"
+     */
+    function incrementStat(difficulty){
+        const stats = loadStats();
+        stats[difficulty]++;
+        saveStats(stats);
+    }
+
     class Grid{
+
+        /**
+         * Initialises canvas dimensions, computes grid frame size, and generates the first puzzle
+         *
+         * @param {String} difficulty - "easy" | "medium" | "hard"
+         * @param {Number} width - canvas width in pixels
+         * @param {Number} height - canvas height in pixels
+         */
         constructor(difficulty, width, height){
-            this.difficulty = difficulty;
-            this.size = 5;
-            this.width = width;
+            this.width  = width;
             this.height = height;
-            this.colors = ['purple', 'teal', 'orange', 'coral'];
+            this.colors = ['purple', 'teal', 'orange', 'coral', 'red', 'blue', 'green', 'maroon'];
 
-            this.frameMin = Math.min(width, height);
+            const buttonArea   = 80;
+            const topBarHeight = 48;
+            const usableHeight = height - buttonArea - topBarHeight;
+
+            this.frameMin     = Math.min(width, usableHeight) - 20;
             this.strokeLength = this.frameMin / 100;
-            this.x = (this.width - this.frameMin) / 2 + 10;
-            this.y = (this.height - this.frameMin) / 2 + 10;
-            this.cellSize = (this.frameMin - 20) / this.size;
 
-            this.solutionGrid = generateFlowGrid(this.size, 4);
+            this.activeColor     = null;
+            this.isDragging      = false;
+            this.showingSolution = false;
+
+            this.setDifficulty(difficulty);
+        }
+
+        /**
+         * Resets all game state and generates a fresh puzzle for the given difficulty
+         *
+         * @param {String} difficulty - "easy" | "medium" | "hard"
+         */
+        setDifficulty(difficulty){
+            this.difficulty      = difficulty;
+            this.showingSolution = false;
+            this.activeColor     = null;
+            this.isDragging      = false;
+
+            if (difficulty === "easy"){
+                this.size      = 5;
+                this.numColors = 4;
+            } else if (difficulty === "medium"){
+                this.size      = 7;
+                this.numColors = 6;
+            } else if (difficulty === "hard"){
+                this.size      = 9;
+                this.numColors = 8;
+            }
+
+            this.cellSize = this.frameMin / this.size;
+
+            const topBarHeight = 48;
+            const buttonArea   = 80;
+            const usableHeight = this.height - buttonArea - topBarHeight;
+
+            this.x = (this.width - this.frameMin) / 2;
+            this.y = topBarHeight + (usableHeight - this.frameMin) / 2;
+
+            this.solutionGrid = generateFlowGrid(this.size, this.numColors);
 
             this.userEndpoints = [];
             for (let i = 0; i < this.solutionGrid.endpoints.length; i++){
@@ -29,16 +111,18 @@ window.addEventListener("load", function(){
 
             this.userGrid  = makeGrid(this.size);
             this.userPaths = [];
-            for (let i = 0; i < this.solutionGrid.endpoints.length; i++){
+            for (let i = 0; i < this.numColors; i++){
                 this.userPaths.push([]);
             }
-
-            // active drawing state
-            this.activeColor = null;   // color index currently being drawn
         }
 
-        // Convert a canvas pixel position to a grid {r, c}
-        // Returns null if the position is outside the grid
+        /**
+         * Converts a canvas pixel position to a grid cell coordinate
+         *
+         * @param {Number} px - x position in canvas pixels
+         * @param {Number} py - y position in canvas pixels
+         * @returns {{ r: Number, c: Number } | null} cell coordinate or null if out of bounds
+         */
         getCellFromPos(px, py){
             const col = Math.floor((px - this.x) / this.cellSize);
             const row = Math.floor((py - this.y) / this.cellSize);
@@ -46,7 +130,13 @@ window.addEventListener("load", function(){
             return { r: row, c: col };
         }
 
-        // Returns the color index if {r,c} is a dot, otherwise null
+        /**
+         * Returns the color index if the cell is a dot endpoint, otherwise null
+         *
+         * @param {Number} r - row index
+         * @param {Number} c - column index
+         * @returns {Number | null} color index or null
+         */
         getDotColor(r, c){
             for (let i = 0; i < this.userEndpoints.length; i++){
                 const ep = this.userEndpoints[i];
@@ -58,7 +148,13 @@ window.addEventListener("load", function(){
             return null;
         }
 
-        // Check if {r,c} is adjacent to the last cell in the active path
+        /**
+         * Returns true if the cell is directly adjacent to the last cell of the active path
+         *
+         * @param {Number} r - row index
+         * @param {Number} c - column index
+         * @returns {Boolean}
+         */
         isAdjacent(r, c){
             const path = this.userPaths[this.activeColor];
             if (path.length === 0) return false;
@@ -66,7 +162,13 @@ window.addEventListener("load", function(){
             return Math.abs(last.r - r) + Math.abs(last.c - c) === 1;
         }
 
-        // Check if {r,c} is the second-to-last cell — user is backtracking
+        /**
+         * Returns true if the cell matches the second-to-last cell in the active path
+         *
+         * @param {Number} r - row index
+         * @param {Number} c - column index
+         * @returns {Boolean}
+         */
         isBacktrack(r, c){
             const path = this.userPaths[this.activeColor];
             if (path.length < 2) return false;
@@ -74,7 +176,11 @@ window.addEventListener("load", function(){
             return prev.r === r && prev.c === c;
         }
 
-        // Clear ownership and path for one color
+        /**
+         * Wipes all cells owned by the given color from userGrid and empties its path array
+         *
+         * @param {Number} color - color index to clear
+         */
         clearColor(color){
             for (let r = 0; r < this.size; r++){
                 for (let c = 0; c < this.size; c++){
@@ -86,46 +192,62 @@ window.addEventListener("load", function(){
             this.userPaths[color] = [];
         }
 
-        // Called when the user presses down on the canvas
+        /**
+         * Handles press — starts a new path from a dot or resumes an existing path from any cell
+         *
+         * @param {Number} px - x position in canvas pixels
+         * @param {Number} py - y position in canvas pixels
+         */
         onPointerDown(px, py){
+            if (this.showingSolution) return;
+
             const cell = this.getCellFromPos(px, py);
             if (!cell) return;
 
-            const dotColor = this.getDotColor(cell.r, cell.c);
+            const dotColor  = this.getDotColor(cell.r, cell.c);
+            const cellColor = this.userGrid[cell.r][cell.c];
 
-            // must start on a dot
-            if (dotColor === null) return;
-
-            // check if there is already a partial path for this color
-            // if so, check if the user clicked the end of it to resume
-            const existingPath = this.userPaths[dotColor];
-            if (existingPath.length > 0){
-                const tail = existingPath[existingPath.length - 1];
-                // clicked the tip of an existing path — resume from there
-                if (tail.r === cell.r && tail.c === cell.c){
-                    this.activeColor = dotColor;
-                    return;
-                }
-                // clicked the start of an existing path — resume from there
-                // reverse the path so the clicked end becomes the tip
-                const head = existingPath[0];
-                if (head.r === cell.r && head.c === cell.c){
-                    this.userPaths[dotColor].reverse();
-                    this.activeColor = dotColor;
-                    return;
-                }
+            if (dotColor !== null){
+                this.clearColor(dotColor);
+                this.activeColor = dotColor;
+                this.isDragging  = true;
+                this.userGrid[cell.r][cell.c] = dotColor;
+                this.userPaths[dotColor].push({ r: cell.r, c: cell.c });
+                return;
             }
 
-            // otherwise start fresh from this dot
-            this.clearColor(dotColor);
-            this.activeColor = dotColor;
-            this.userGrid[cell.r][cell.c] = dotColor;
-            this.userPaths[dotColor].push({ r: cell.r, c: cell.c });
+            if (cellColor !== null){
+                const path = this.userPaths[cellColor];
+
+                let clickedIndex = -1;
+                for (let i = 0; i < path.length; i++){
+                    if (path[i].r === cell.r && path[i].c === cell.c){
+                        clickedIndex = i;
+                        break;
+                    }
+                }
+
+                if (clickedIndex === -1) return;
+
+                for (let i = clickedIndex + 1; i < path.length; i++){
+                    this.userGrid[path[i].r][path[i].c] = EMPTY;
+                }
+                this.userPaths[cellColor] = path.slice(0, clickedIndex + 1);
+
+                this.activeColor = cellColor;
+                this.isDragging  = true;
+            }
         }
 
-        // Called as the user drags across the canvas
+        /**
+         * Handles drag — extends or backtracks the active path, blocks loops and foreign endpoints
+         *
+         * @param {Number} px - x position in canvas pixels
+         * @param {Number} py - y position in canvas pixels
+         */
         onPointerMove(px, py){
-            if (this.activeColor === null) return;
+            if (!this.isDragging || this.activeColor === null) return;
+            if (this.showingSolution) return;
 
             const cell = this.getCellFromPos(px, py);
             if (!cell) return;
@@ -133,64 +255,150 @@ window.addEventListener("load", function(){
             const path = this.userPaths[this.activeColor];
             const last = path[path.length - 1];
 
-            // already on this cell
             if (last.r === cell.r && last.c === cell.c) return;
 
-            // backtracking — remove the last cell
             if (this.isBacktrack(cell.r, cell.c)){
                 this.userGrid[last.r][last.c] = EMPTY;
                 path.pop();
                 return;
             }
 
-            // must be adjacent to continue
             if (!this.isAdjacent(cell.r, cell.c)) return;
 
-            // if another color owns this cell, clear it
+            const activePath = this.userPaths[this.activeColor];
+            for (let i = 0; i < activePath.length; i++){
+                if (activePath[i].r === cell.r && activePath[i].c === cell.c) return;
+            }
+
+            const epColor = this.getDotColor(cell.r, cell.c);
+            if (epColor !== null && epColor !== this.activeColor) return;
+
             const existing = this.userGrid[cell.r][cell.c];
             if (existing !== EMPTY && existing !== this.activeColor){
                 this.clearColor(existing);
             }
 
-            // stop drawing if we hit the other endpoint of this color
-            const dotColor = this.getDotColor(cell.r, cell.c);
             this.userGrid[cell.r][cell.c] = this.activeColor;
             path.push({ r: cell.r, c: cell.c });
 
+            const dotColor = this.getDotColor(cell.r, cell.c);
             if (dotColor === this.activeColor){
-                this.activeColor = null;  // path is complete
+                this.activeColor = null;
+                this.isDragging  = false;
+
+                if (this.checkWin()){
+                    incrementStat(this.difficulty);
+                    sessionStorage.setItem("result_difficulty", this.difficulty);
+                    window.location.replace("stats.html");
+                }
             }
         }
 
-        // Called when the user lifts the pointer — pause, not clear
+        /**
+         * Stops the active drag and clears the active color on pointer release
+         */
         onPointerUp(){
+            this.isDragging  = false;
             this.activeColor = null;
         }
 
+        /**
+         * Returns true if every cell is filled and every path connects its two endpoints
+         *
+         * @returns {Boolean}
+         */
+        checkWin(){
+            // count total cells covered by all user paths
+            let covered = 0;
+            for (let i = 0; i < this.userPaths.length; i++){
+                covered += this.userPaths[i].length;
+            }
+            if (covered !== this.size * this.size) return false;
+
+            // every path must connect its two endpoints end-to-end
+            for (let i = 0; i < this.userPaths.length; i++){
+                const path = this.userPaths[i];
+                const ep   = this.solutionGrid.endpoints[i];
+                if (path.length < 2) return false;
+                const head = path[0];
+                const tail = path[path.length - 1];
+                const forwardOk =
+                    head.r === ep.start.r && head.c === ep.start.c &&
+                    tail.r === ep.end.r   && tail.c === ep.end.c;
+                const reverseOk =
+                    head.r === ep.end.r   && head.c === ep.end.c   &&
+                    tail.r === ep.start.r && tail.c === ep.start.c;
+                if (!forwardOk && !reverseOk) return false;
+            }
+            return true;
+        }
+
+        /**
+         * Flags showingSolution so drawUserPaths renders the solution and blocks all input
+         */
+        showSolution(){
+            this.showingSolution = true;
+            this.isDragging      = false;
+            this.activeColor     = null;
+        }
+
+        /**
+         * Draws the grid border and inner cell lines onto the canvas
+         *
+         * @param {CanvasRenderingContext2D} ctx
+         */
         drawGrid(ctx){
             ctx.strokeStyle = "white";
-            ctx.lineWidth = this.strokeLength;
-            let length = this.frameMin - 20;
+            ctx.lineWidth   = this.strokeLength;
 
-            ctx.strokeRect(this.x, this.y, length, length);
+            ctx.strokeRect(this.x, this.y, this.frameMin, this.frameMin);
 
-            let size = 0;
-            if (this.difficulty == "easy") size = 5;
-
-            for (let i = 1; i < size; i++){
+            for (let i = 1; i < this.size; i++){
                 ctx.beginPath();
-                ctx.moveTo(this.x + i * length / 5, this.y);
-                ctx.lineTo(this.x + i * length / 5, this.y + length);
+                ctx.moveTo(this.x + i * this.cellSize, this.y);
+                ctx.lineTo(this.x + i * this.cellSize, this.y + this.frameMin);
                 ctx.stroke();
 
                 ctx.beginPath();
-                ctx.moveTo(this.x, this.y + i * length / 5);
-                ctx.lineTo(this.x + length, this.y + i * length / 5);
+                ctx.moveTo(this.x, this.y + i * this.cellSize);
+                ctx.lineTo(this.x + this.frameMin, this.y + i * this.cellSize);
                 ctx.stroke();
             }
         }
 
+        /**
+         * Draws the user's current paths, or the solution paths if showingSolution is true
+         *
+         * @param {CanvasRenderingContext2D} ctx
+         */
         drawUserPaths(ctx){
+            if (this.showingSolution){
+                const endpoints = this.solutionGrid.endpoints;
+                for (let i = 0; i < endpoints.length; i++){
+                    const path = endpoints[i].path;
+                    if (path.length < 2) continue;
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = this.colors[endpoints[i].color];
+                    ctx.lineWidth   = this.cellSize * 0.4;
+                    ctx.lineCap     = 'round';
+                    ctx.lineJoin    = 'round';
+
+                    ctx.moveTo(
+                        this.x + path[0].c * this.cellSize + this.cellSize / 2,
+                        this.y + path[0].r * this.cellSize + this.cellSize / 2
+                    );
+                    for (let j = 1; j < path.length; j++){
+                        ctx.lineTo(
+                            this.x + path[j].c * this.cellSize + this.cellSize / 2,
+                            this.y + path[j].r * this.cellSize + this.cellSize / 2
+                        );
+                    }
+                    ctx.stroke();
+                }
+                return;
+            }
+
             for (let i = 0; i < this.userPaths.length; i++){
                 const path = this.userPaths[i];
                 if (path.length < 2) continue;
@@ -205,23 +413,28 @@ window.addEventListener("load", function(){
                     this.x + path[0].c * this.cellSize + this.cellSize / 2,
                     this.y + path[0].r * this.cellSize + this.cellSize / 2
                 );
-
                 for (let j = 1; j < path.length; j++){
                     ctx.lineTo(
                         this.x + path[j].c * this.cellSize + this.cellSize / 2,
                         this.y + path[j].r * this.cellSize + this.cellSize / 2
                     );
                 }
-
                 ctx.stroke();
             }
         }
 
+        /**
+         * Draws a filled circle for every start and end dot on the grid
+         *
+         * @param {CanvasRenderingContext2D} ctx
+         */
         drawEndpoints(ctx){
+            ctx.save();
+            ctx.lineWidth = 2;
+
             for (let i = 0; i < this.userEndpoints.length; i++){
                 const color = this.colors[this.userEndpoints[i].color];
 
-                // start dot — note: c maps to x, r maps to y
                 const sx = this.x + (this.userEndpoints[i].start.c + 0.5) * this.cellSize;
                 const sy = this.y + (this.userEndpoints[i].start.r + 0.5) * this.cellSize;
                 ctx.beginPath();
@@ -231,7 +444,6 @@ window.addEventListener("load", function(){
                 ctx.fill();
                 ctx.stroke();
 
-                // end dot
                 const ex = this.x + (this.userEndpoints[i].end.c + 0.5) * this.cellSize;
                 const ey = this.y + (this.userEndpoints[i].end.r + 0.5) * this.cellSize;
                 ctx.beginPath();
@@ -241,11 +453,17 @@ window.addEventListener("load", function(){
                 ctx.fill();
                 ctx.stroke();
             }
+
+            ctx.restore();
         }
     }
 
-    // ── Generator functions (unchanged) ──────────────────────────
-
+    /**
+     * Creates and returns a size×size grid filled with EMPTY (null)
+     *
+     * @param {Number} size - grid dimension
+     * @returns {Array<Array<null>>} 2D array filled with null
+     */
     function makeGrid(size){
         const grid = [];
         for (let r = 0; r < size; r++){
@@ -257,9 +475,15 @@ window.addEventListener("load", function(){
         return grid;
     }
 
+    /**
+     * Shuffles an array in place using Fisher-Yates and returns it
+     *
+     * @param {Array} arr - array to shuffle
+     * @returns {Array} the same array, shuffled
+     */
     function shuffle(arr){
         for (let i = arr.length - 1; i > 0; i--){
-            const j = Math.floor(Math.random() * (i + 1));
+            const j    = Math.floor(Math.random() * (i + 1));
             const temp = arr[i];
             arr[i] = arr[j];
             arr[j] = temp;
@@ -267,6 +491,14 @@ window.addEventListener("load", function(){
         return arr;
     }
 
+    /**
+     * Returns all valid grid cells directly adjacent (up/down/left/right) to the given cell
+     *
+     * @param {Number} r - row index
+     * @param {Number} c - column index
+     * @param {Number} size - grid dimension
+     * @returns {Array<{ r: Number, c: Number }>} array of adjacent cell coordinates
+     */
     function getNeighbors(r, c, size){
         const result = [];
         for (let i = 0; i < DIRS.length; i++){
@@ -279,9 +511,16 @@ window.addEventListener("load", function(){
         return result;
     }
 
+    /**
+     * Assigns every cell to a color territory via randomised multi-source BFS (Voronoi partition)
+     *
+     * @param {Number} size - grid dimension
+     * @param {Number} numColors - number of color regions to create
+     * @returns {Array<Array<Number>>} 2D array where each cell holds a color index
+     */
     function partitionGrid(size, numColors){
-        const region = makeGrid(size);
-        const queue  = [];
+        const region   = makeGrid(size);
+        const queue    = [];
         const allCells = [];
         for (let i = 0; i < size * size; i++){
             allCells.push({ r: Math.floor(i / size), c: i % size });
@@ -315,6 +554,14 @@ window.addEventListener("load", function(){
         return region;
     }
 
+    /**
+     * Traces a Hamiltonian path through all cells of one color region using DFS or Warnsdorff's heuristic
+     *
+     * @param {Array<Array<Number>>} region - 2D array of color indices
+     * @param {Number} color - color index to trace
+     * @param {Number} size - grid dimension
+     * @returns {Array<{ r: Number, c: Number }> | null} ordered path of cells or null if failed
+     */
     function tracePath(region, color, size){
         const cells = [];
         for (let r = 0; r < size; r++){
@@ -351,7 +598,7 @@ window.addEventListener("load", function(){
                 const path = [start];
                 function dfs(cur){
                     if (path.length === total) return true;
-                    const nbs = shuffle(getNeighbors(cur.r, cur.c, size));
+                    const nbs        = shuffle(getNeighbors(cur.r, cur.c, size));
                     const candidates = [];
                     for (let i = 0; i < nbs.length; i++){
                         if (inRegion(nbs[i].r, nbs[i].c) && !visited.has(key(nbs[i].r, nbs[i].c))){
@@ -403,6 +650,14 @@ window.addEventListener("load", function(){
         return null;
     }
 
+    /**
+     * Generates a complete Flow Free puzzle by partitioning the grid and tracing a path per color
+     *
+     * @param {Number} size - grid dimension
+     * @param {Number} numColors - number of color pairs
+     * @param {Number} maxRetries - maximum generation attempts before returning null
+     * @returns {{ solution: Array<Array<Number>>, endpoints: Array<Object> } | null}
+     */
     function generateFlowGrid(size, numColors, maxRetries){
         if (maxRetries === undefined) maxRetries = 60;
         for (let attempt = 0; attempt < maxRetries; attempt++){
@@ -435,34 +690,77 @@ window.addEventListener("load", function(){
         return null;
     }
 
-    // ── Canvas setup ─────────────────────────────────────────────
+    /**
+     * Extracts the canvas-relative pixel position from a mouse or touch event
+     *
+     * @param {Event} e - pointer or touch event
+     * @returns {{ x: Number, y: Number }}
+     */
+    function getCanvasPos(e){
+        const rect    = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top,
+        };
+    }
+
+    /**
+     * Removes the active class from all difficulty buttons and adds it to the specified button
+     *
+     * @param {String} activeId - element id of the button to mark active
+     */
+    function setActiveButton(activeId){
+        document.getElementById("btn-easy").classList.remove("active");
+        document.getElementById("btn-medium").classList.remove("active");
+        document.getElementById("btn-hard").classList.remove("active");
+        document.getElementById(activeId).classList.add("active");
+    }
+
+    /**
+     * Clears the canvas, fills the background, and draws the grid, paths, and endpoints each frame
+     */
+    function animate(){
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        grid.drawGrid(ctx);
+        grid.drawUserPaths(ctx);
+        grid.drawEndpoints(ctx);
+        requestAnimationFrame(animate);
+    }
 
     const canvas = document.getElementById("canvas");
     const ctx    = canvas.getContext("2d");
     canvas.width  = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
 
-    const grid = new Grid("easy", canvas.width, canvas.height);
-
-    function getCanvasPos(e){
-        const rect = canvas.getBoundingClientRect();
-        return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-        };
+    var startDifficulty = "easy";
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("difficulty")){
+        startDifficulty = params.get("difficulty");
     }
 
+    const grid = new Grid(startDifficulty, canvas.width, canvas.height);
+
+    var btnMap = { easy: "btn-easy", medium: "btn-medium", hard: "btn-hard" };
+    setActiveButton(btnMap[startDifficulty]);
+
     canvas.addEventListener("pointerdown", function(e){
+        e.preventDefault();
         const pos = getCanvasPos(e);
         grid.onPointerDown(pos.x, pos.y);
     });
 
     canvas.addEventListener("pointermove", function(e){
+        e.preventDefault();
         const pos = getCanvasPos(e);
         grid.onPointerMove(pos.x, pos.y);
     });
 
     canvas.addEventListener("pointerup", function(e){
+        e.preventDefault();
         grid.onPointerUp();
     });
 
@@ -470,14 +768,56 @@ window.addEventListener("load", function(){
         grid.onPointerUp();
     });
 
-    function animate(){
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        grid.drawGrid(ctx);
-        grid.drawUserPaths(ctx);
-        grid.drawEndpoints(ctx);
-        requestAnimationFrame(animate);
-    }
+    canvas.addEventListener("touchstart", function(e){
+        e.preventDefault();
+        const pos = getCanvasPos(e);
+        grid.onPointerDown(pos.x, pos.y);
+    }, { passive: false });
+
+    canvas.addEventListener("touchmove", function(e){
+        e.preventDefault();
+        const pos = getCanvasPos(e);
+        grid.onPointerMove(pos.x, pos.y);
+    }, { passive: false });
+
+    canvas.addEventListener("touchend", function(e){
+        e.preventDefault();
+        grid.onPointerUp();
+    }, { passive: false });
+
+    document.getElementById("btn-easy").addEventListener("click", function(){
+        grid.setDifficulty("easy");
+        setActiveButton("btn-easy");
+    });
+
+    document.getElementById("btn-medium").addEventListener("click", function(){
+        grid.setDifficulty("medium");
+        setActiveButton("btn-medium");
+    });
+
+    document.getElementById("btn-hard").addEventListener("click", function(){
+        grid.setDifficulty("hard");
+        setActiveButton("btn-hard");
+    });
+
+    document.getElementById("btn-solution").addEventListener("click", function(){
+        grid.showSolution();
+    });
+
+    window.addEventListener("resize", function(){
+        canvas.width  = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        grid.width    = canvas.width;
+        grid.height   = canvas.height;
+
+        const topBarHeight = 48;
+        const buttonArea   = 80;
+        const usableHeight = canvas.height - buttonArea - topBarHeight;
+        grid.frameMin     = Math.min(canvas.width, usableHeight) - 20;
+        grid.strokeLength = grid.frameMin / 100;
+
+        grid.setDifficulty(grid.difficulty);
+    });
+
     animate();
 });

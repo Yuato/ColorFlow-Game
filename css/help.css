@@ -1,0 +1,67 @@
+/**
+* Tony Yuan
+* March 21 2026
+* A CSS file that contains all the visuals for the help section
+**/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    min-height: 100%;
+    background: black;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.top-bar {
+    height: 48px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    background: black;
+}
+
+.btn-back {
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+}
+
+.content {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 24px 64px;
+}
+
+h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: white;
+}
+
+.section {
+    margin-bottom: 28px;
+}
+
+h2 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: white;
+    margin-bottom: 8px;
+}
+
+p {
+    font-size: 16px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.8);
+}

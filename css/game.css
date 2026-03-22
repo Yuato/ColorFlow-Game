@@ -1,23 +1,113 @@
-html{
-    padding:0;
-    margin:0;
-    height:100%;
-    width: 100%;
-}
-
-
-body{
+/**
+* Tony Yuan
+* March 12 2026
+* A CSS file that contains all the visuals for the main game
+**/
+* {
     margin: 0;
     padding: 0;
-    height:100%;
-    width: 100%;
-    overflow: hidden;
-    color:white;
-    font-family: 'Open Sans', 'Helvetica Neue', sans-serif;
+    box-sizing: border-box;
 }
 
-#canvas{
+html, body {
+    width: 100%;
+    height: 100%;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Top bar ─────────────────────────────────────── */
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 16px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+}
+
+.btn-back,
+.btn-stats {
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    transition: border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-back:hover,
+.btn-stats:hover {
+    border-color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Canvas ──────────────────────────────────────── */
+
+canvas {
     display: block;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    touch-action: none;
+}
+
+/* ── Bottom button row ───────────────────────────── */
+
+.btn-row {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    height: 80px;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+}
+
+.btn-row button {
+    flex: 1;
+    max-width: 120px;
+    height: 44px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.btn-row button:hover {
+    border-color: white;
+    color: white;
+}
+
+.btn-row button.active {
+    background: white;
+    border-color: white;
+    color: #111;
+}
+
+.btn-row .btn-solution {
+    border-color: rgba(255, 200, 0, 0.4);
+    color: rgba(255, 200, 0, 0.6);
+}
+
+.btn-row .btn-solution:hover {
+    border-color: #ffc800;
+    color: #ffc800;
 }

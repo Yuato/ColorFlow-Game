@@ -1,0 +1,100 @@
+/**
+* Tony Yuan
+* March 19 2026
+* A CSS file that contains all the visuals for the stats page
+**/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.wins-header {
+    text-align: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 32px;
+}
+
+.top-bar {
+    height: 48px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+}
+
+.btn-back {
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.btn-back:hover {
+    border-color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.stats-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+}
+
+.stat-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.stat-label {
+    font-size: 32px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.5);
+    width: 120px;
+    text-align: right;
+}
+
+.stat-colon {
+    font-size: 32px;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.stat-value {
+    font-size: 48px;
+    font-weight: 700;
+    width: 80px;
+}
+
+.stat-value.easy   { color: #4ade80; }
+.stat-value.medium { color: #facc15; }
+.stat-value.hard   { color: #f87171; }
+
+.total-row {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #333;
+}
+
+.total-row .stat-label { color: rgba(255, 255, 255, 0.7); }
+.total-row .stat-value { color: white; }
